@@ -1,5 +1,7 @@
 import pygame
 import sys
+import matplotlib.pyplot as plt
+import numpy as np
 import math
 
 # Initialize pygame
@@ -8,7 +10,7 @@ pygame.init()
 # Set up the window
 WIDTH, HEIGHT = 2000, 1500
 window = pygame.display.set_mode((WIDTH, HEIGHT))
-pygame.display.set_caption('Touch to Place Icon')
+pygame.display.set_caption('Touch to add wind turbine to the wind farm')
 
 # Define colors
 WHITE = (255, 255, 255)
@@ -33,8 +35,6 @@ icon_image = pygame.image.load('icon.png')
 # Resize the icon image if necessary
 icon_size = (100, 100)
 icon_image = pygame.transform.scale(icon_image, icon_size)
-
-# Create mirrored versions of the icon
 icon_image = pygame.transform.flip(icon_image, True, False)  # Horizontal flip
 
 # Store icon positions
@@ -42,6 +42,23 @@ icon_positions = []
 
 # Define minimum distance between icons
 MIN_DISTANCE = 100  # Adjust this value as needed
+
+
+def generate_plot(positions):
+    fig, ax = plt.subplots(figsize=(10, 7))
+    ax.axis('off')
+    ax.set_position([0, 0, 1, 1])
+    ax.set_xlim([0, WIDTH])
+    ax.set_ylim([-HEIGHT, 0])
+
+    if len(positions) > 0:
+        positions = np.array(positions)
+        plt.scatter(positions[:, 0], -positions[:, 1])
+
+    # Save the plot as an image file
+    plt.savefig('plot_background.png', bbox_inches='tight', pad_inches=0, transparent=True)
+    plt.close()
+
 
 def is_too_close(new_pos, existing_positions, min_distance):
     """Check if the new position is too close to any existing positions."""
@@ -65,6 +82,11 @@ def draw_button():
 running = True
 while running:
     window.fill(WHITE)
+    # Load and display the updated plot image
+    generate_plot(icon_positions)
+    plot_image = pygame.image.load('plot_background.png')  # Reload updated plot
+    plot_image = pygame.transform.scale(plot_image, (WIDTH, HEIGHT))
+    window.blit(plot_image, (0, 0))  # Draw the plot image as the background
 
     # Draw the rectangle
     pygame.draw.rect(window, GRAY, rect, 5)
@@ -82,12 +104,12 @@ while running:
             running = False
         elif event.type == pygame.MOUSEBUTTONDOWN:
             if event.button == 1:  # Left mouse button (or touch)
-                # Get mouse position
                 mouse_x, mouse_y = event.pos
 
                 # Check if the click is inside the rectangle
                 if rect.collidepoint(mouse_x, mouse_y):
                     new_pos = (mouse_x, mouse_y)
+                    print(new_pos)
 
                     # Check if the new position is too close to any existing icon
                     if not is_too_close(new_pos, icon_positions, MIN_DISTANCE):
