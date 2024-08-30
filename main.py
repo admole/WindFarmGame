@@ -12,17 +12,23 @@ pygame.display.set_caption('Touch to Place Icon')
 # Define colors
 WHITE = (255, 255, 255)
 GRAY = (200, 200, 200)
-ICON_COLOR = (255, 0, 0)  # Red color for the icon
 
 # Define the rectangular area
 rect_x, rect_y = 100, 100
 rect_width, rect_height = 1800, 1300
 rect = pygame.Rect(rect_x, rect_y, rect_width, rect_height)
 
-# Icon properties
-icon_size = 20
+# Load the icon image
+icon_image = pygame.image.load('icon.png')  # Replace 'icon.png' with your image filename
 
-# Store icon positions
+# Resize the icon image if necessary
+icon_size = (100, 100)
+icon_image = pygame.transform.scale(icon_image, icon_size)
+
+# Create mirrored versions of the icon
+icon_image = pygame.transform.flip(icon_image, True, False)  # Horizontal flip
+
+# Store icon positions and types
 icon_positions = []
 
 # Run the game loop
@@ -34,8 +40,8 @@ while running:
     pygame.draw.rect(window, GRAY, rect)
 
     # Draw all icons
-    for pos in icon_positions:
-        pygame.draw.rect(window, ICON_COLOR, (pos[0] - icon_size // 2, pos[1] - icon_size // 2, icon_size, icon_size))
+    for i, pos in enumerate(icon_positions):
+        window.blit(icon_image, (pos[0] - icon_size[0] // 2, pos[1] - icon_size[1] // 2))
 
     # Todo: add floris interface here
 
