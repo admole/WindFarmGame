@@ -1,5 +1,6 @@
 import pygame
 import sys
+import math
 
 # Initialize pygame
 pygame.init()
@@ -19,7 +20,7 @@ rect_width, rect_height = 1800, 1300
 rect = pygame.Rect(rect_x, rect_y, rect_width, rect_height)
 
 # Load the icon image
-icon_image = pygame.image.load('icon.png')  # Replace 'icon.png' with your image filename
+icon_image = pygame.image.load('icon.png')
 
 # Resize the icon image if necessary
 icon_size = (100, 100)
@@ -28,8 +29,19 @@ icon_image = pygame.transform.scale(icon_image, icon_size)
 # Create mirrored versions of the icon
 icon_image = pygame.transform.flip(icon_image, True, False)  # Horizontal flip
 
-# Store icon positions and types
+# Store icon positions
 icon_positions = []
+
+# Define minimum distance between icons
+MIN_DISTANCE = 100  # Adjust this value as needed
+
+def is_too_close(new_pos, existing_positions, min_distance):
+    """Check if the new position is too close to any existing positions."""
+    for pos in existing_positions:
+        distance = math.hypot(new_pos[0] - pos[0], new_pos[1] - pos[1])
+        if distance < min_distance:
+            return True
+    return False
 
 # Run the game loop
 running = True
@@ -56,8 +68,12 @@ while running:
 
                 # Check if the click is inside the rectangle
                 if rect.collidepoint(mouse_x, mouse_y):
-                    # Save the position of the icon
-                    icon_positions.append((mouse_x, mouse_y))
+                    new_pos = (mouse_x, mouse_y)
+
+                    # Check if the new position is too close to any existing icon
+                    if not is_too_close(new_pos, icon_positions, MIN_DISTANCE):
+                        # Save the position of the icon
+                        icon_positions.append(new_pos)
 
         elif event.type == pygame.FINGERDOWN:
             # Convert normalized touch position to screen coordinates
@@ -65,8 +81,12 @@ while running:
 
             # Check if the touch is inside the rectangle
             if rect.collidepoint(touch_x, touch_y):
-                # Save the position of the icon
-                icon_positions.append((touch_x, touch_y))
+                new_pos = (touch_x, touch_y)
+
+                # Check if the new position is too close to any existing icon
+                if not is_too_close(new_pos, icon_positions, MIN_DISTANCE):
+                    # Save the position of the icon
+                    icon_positions.append(new_pos)
 
         elif event.type == pygame.KEYDOWN:
             if event.key == pygame.K_ESCAPE:  # Check if ESC key is pressed
