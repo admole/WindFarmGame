@@ -3,6 +3,8 @@ import sys
 import matplotlib.pyplot as plt
 import numpy as np
 import math
+from floris import FlorisModel
+from floris.flow_visualization import visualize_cut_plane
 
 # Initialize pygame
 pygame.init()
@@ -33,7 +35,7 @@ button_text = 'Clear Turbines'
 icon_image = pygame.image.load('icon.png')
 
 # Resize the icon image if necessary
-icon_size = (100, 100)
+icon_size = (126, 126)
 icon_image = pygame.transform.scale(icon_image, icon_size)
 icon_image = pygame.transform.flip(icon_image, True, False)  # Horizontal flip
 
@@ -53,7 +55,24 @@ def generate_plot(positions):
 
     if len(positions) > 0:
         positions = np.array(positions)
-        plt.scatter(positions[:, 0], -positions[:, 1])
+        fli.set(layout_x=positions[:, 0], layout_y=-positions[:, 1])
+        zero_yaws = np.zeros_like(positions[:, 0])
+        fli.set(yaw_angles=zero_yaws[np.newaxis, :],
+                wind_speeds=[8.0],
+                wind_directions=[270.0],
+                turbulence_intensities=[0.08])
+        fli.run()
+        horizontal_plane = fli.calculate_horizontal_plane(
+            x_resolution=200,
+            y_resolution=200,
+            height=90.0,
+        )
+
+        # Plot the flow field with rotors
+        visualize_cut_plane(horizontal_plane,
+                            ax=ax,
+                            label_contours=False,
+                            cmap='Blues_r')
 
     # Save the plot as an image file
     plt.savefig('plot_background.png', bbox_inches='tight', pad_inches=0, transparent=True)
@@ -78,12 +97,15 @@ def draw_button():
     window.blit(text_surface, text_rect)
 
 
+# setup floris
+fli = FlorisModel('./gch.yaml')
+generate_plot(icon_positions)
+
 # Run the game loop
 running = True
 while running:
     window.fill(WHITE)
     # Load and display the updated plot image
-    generate_plot(icon_positions)
     plot_image = pygame.image.load('plot_background.png')  # Reload updated plot
     plot_image = pygame.transform.scale(plot_image, (WIDTH, HEIGHT))
     window.blit(plot_image, (0, 0))  # Draw the plot image as the background
@@ -108,16 +130,18 @@ while running:
 
                 # Check if the click is inside the rectangle
                 if rect.collidepoint(mouse_x, mouse_y):
-                    new_pos = (mouse_x, mouse_y)
-                    print(new_pos)
+                    new_pos = (float(mouse_x), float(mouse_y))
 
                     # Check if the new position is too close to any existing icon
                     if not is_too_close(new_pos, icon_positions, MIN_DISTANCE):
                         icon_positions.append(new_pos)
+                        generate_plot(icon_positions)
 
                 # Check if the click is inside the button
                 if button_rect.collidepoint(mouse_x, mouse_y):
                     icon_positions.clear()  # Remove all icons
+                    generate_plot(icon_positions)
+
 
         elif event.type == pygame.FINGERDOWN:
             # Convert normalized touch position to screen coordinates
@@ -130,10 +154,13 @@ while running:
                 # Check if the new position is too close to any existing icon
                 if not is_too_close(new_pos, icon_positions, MIN_DISTANCE):
                     icon_positions.append(new_pos)
+                    generate_plot(icon_positions)
 
             # Check if the touch is inside the button
             if button_rect.collidepoint(touch_x, touch_y):
                 icon_positions.clear()  # Remove all icons
+                generate_plot(icon_positions)
+
 
         elif event.type == pygame.KEYDOWN:
             if event.key == pygame.K_ESCAPE:  # Check if ESC key is pressed
