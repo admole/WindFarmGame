@@ -18,6 +18,7 @@ pygame.display.set_caption('Touch to add wind turbine to the wind farm')
 WHITE = (255, 255, 255)
 GRAY = (200, 200, 200)
 RED = (255, 0, 0)
+TEXT_COLOR = (0, 0, 0)
 
 # Define the rectangular area
 rect_x, rect_y = 100, 100
@@ -41,9 +42,12 @@ icon_image = pygame.transform.flip(icon_image, True, False)  # Horizontal flip
 
 # Store icon positions
 icon_positions = []
+farm_powers = []
 
 # Define minimum distance between icons
 MIN_DISTANCE = 100  # Adjust this value as needed
+
+font = pygame.font.Font(None, 36)  # None uses the default font, 36 is the font size
 
 
 def generate_plot(positions):
@@ -52,6 +56,7 @@ def generate_plot(positions):
     ax.set_position([0, 0, 1, 1])
     ax.set_xlim([0, WIDTH])
     ax.set_ylim([-HEIGHT, 0])
+    farm_power = 0
 
     if len(positions) > 0:
         positions = np.array(positions)
@@ -74,9 +79,13 @@ def generate_plot(positions):
                             label_contours=False,
                             cmap='Blues_r')
 
+        farm_power = fli.get_farm_power()[0]
+
     # Save the plot as an image file
     plt.savefig('plot_background.png', bbox_inches='tight', pad_inches=0, transparent=True)
     plt.close()
+
+    return farm_power
 
 
 def is_too_close(new_pos, existing_positions, min_distance):
@@ -99,7 +108,7 @@ def draw_button():
 
 # setup floris
 fli = FlorisModel('./gch.yaml')
-generate_plot(icon_positions)
+_ = generate_plot(icon_positions)
 
 # Run the game loop
 running = True
@@ -119,6 +128,11 @@ while running:
 
     # Draw the button
     draw_button()
+    efficiency = farm_powers[-1]/(farm_powers[0]*len(farm_powers)+1e-12) if len(farm_powers) > 0 else 0.
+    # Update and render the text showing the number of turbines
+    turbine_count_text = font.render(f"Number of turbines: {len(icon_positions)}  Windfarm Efficiency: {efficiency*100:.1f}%", True, TEXT_COLOR)
+    text_rect = turbine_count_text.get_rect(center=(WIDTH // 2, HEIGHT - 30))  # Center text at the bottom of the screen
+    window.blit(turbine_count_text, text_rect)
 
     # Event handling
     for event in pygame.event.get():
@@ -135,13 +149,14 @@ while running:
                     # Check if the new position is too close to any existing icon
                     if not is_too_close(new_pos, icon_positions, MIN_DISTANCE):
                         icon_positions.append(new_pos)
-                        generate_plot(icon_positions)
+                        new_power = generate_plot(icon_positions)
+                        farm_powers.append(new_power)
 
                 # Check if the click is inside the button
                 if button_rect.collidepoint(mouse_x, mouse_y):
                     icon_positions.clear()  # Remove all icons
-                    generate_plot(icon_positions)
-
+                    farm_powers.clear()
+                    new_power = generate_plot(icon_positions)
 
         elif event.type == pygame.FINGERDOWN:
             # Convert normalized touch position to screen coordinates
@@ -154,13 +169,14 @@ while running:
                 # Check if the new position is too close to any existing icon
                 if not is_too_close(new_pos, icon_positions, MIN_DISTANCE):
                     icon_positions.append(new_pos)
-                    generate_plot(icon_positions)
+                    new_power = generate_plot(icon_positions)
+                    farm_powers.append(new_power)
 
             # Check if the touch is inside the button
             if button_rect.collidepoint(touch_x, touch_y):
                 icon_positions.clear()  # Remove all icons
-                generate_plot(icon_positions)
-
+                farm_powers.clear()
+                new_power = generate_plot(icon_positions)
 
         elif event.type == pygame.KEYDOWN:
             if event.key == pygame.K_ESCAPE:  # Check if ESC key is pressed
