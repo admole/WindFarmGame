@@ -5,6 +5,7 @@ import numpy as np
 import math
 from floris import FlorisModel
 from floris.flow_visualization import visualize_cut_plane
+import random
 
 # Initialize pygame
 pygame.init()
@@ -13,11 +14,13 @@ pygame.init()
 WIDTH, HEIGHT = 2000, 1500
 window = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption('Touch to add wind turbine to the wind farm')
+clock = pygame.time.Clock()
 
 # Define colors
 WHITE = (255, 255, 255)
 GRAY = (200, 200, 200)
 RED = (255, 0, 0)
+BLUE = (200, 200, 255)
 TEXT_COLOR = (0, 0, 0)
 
 # Define the rectangular area
@@ -47,8 +50,29 @@ farm_powers = []
 # Define minimum distance between icons
 MIN_DISTANCE = 100  # Adjust this value as needed
 
-font = pygame.font.Font(None, 36)  # None uses the default font, 36 is the font size
+font = pygame.font.Font(None, 90)
 
+
+class WindParticle:
+    def __init__(self):
+        self.x = random.randint(0, WIDTH)
+        self.y = random.randint(0, HEIGHT)
+        self.size = random.randint(2, 5)
+        self.speed = random.uniform(8.0, 10.0)
+        self.direction = random.uniform(-0.5, 0.5)  # Slight variation in direction
+
+    def update(self):
+        # Move the particle in the wind direction
+        self.x += self.speed
+        self.y += self.direction
+
+        # Reset the particle position if it moves off screen
+        if self.x > WIDTH:
+            self.x = 0
+            self.y = random.randint(0, HEIGHT)
+
+    def draw(self, surface):
+        pygame.draw.circle(surface, BLUE, (int(self.x), int(self.y)), self.size)
 
 def generate_plot(positions):
     fig, ax = plt.subplots(figsize=(10, 7))
@@ -110,6 +134,9 @@ def draw_button():
 fli = FlorisModel('./gch.yaml')
 _ = generate_plot(icon_positions)
 
+# Create a list of particles
+particles = [WindParticle() for _ in range(100)]
+
 # Run the game loop
 running = True
 while running:
@@ -133,6 +160,11 @@ while running:
     turbine_count_text = font.render(f"Number of turbines: {len(icon_positions)}  Windfarm Efficiency: {efficiency*100:.1f}%", True, TEXT_COLOR)
     text_rect = turbine_count_text.get_rect(center=(WIDTH // 2, HEIGHT - 30))  # Center text at the bottom of the screen
     window.blit(turbine_count_text, text_rect)
+
+    # Update and draw each particle
+    for particle in particles:
+        particle.update()
+        particle.draw(window)
 
     # Event handling
     for event in pygame.event.get():
@@ -184,6 +216,8 @@ while running:
 
     # Update the display
     pygame.display.flip()
+    # Cap the frame rate
+    clock.tick(60)
 
 # Quit pygame
 pygame.quit()
