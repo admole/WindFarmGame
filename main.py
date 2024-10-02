@@ -1,10 +1,8 @@
 import pygame
 import sys
-import matplotlib.pyplot as plt
 import numpy as np
 import math
 from floris import FlorisModel
-from floris.flow_visualization import visualize_cut_plane
 import random
 
 # Initialize pygame
@@ -62,6 +60,11 @@ class WindParticle:
         self.direction = random.uniform(-0.5, 0.5)  # Slight variation in direction
 
     def update(self):
+        for turbine_pos in icon_positions:
+            if abs(self.y - turbine_pos[1]) < 126:
+                if self.x > turbine_pos[0]:
+                    self.speed = random.uniform(4.0, 5.0)
+
         # Move the particle in the wind direction
         self.x += self.speed
         self.y += self.direction
@@ -70,16 +73,12 @@ class WindParticle:
         if self.x > WIDTH:
             self.x = 0
             self.y = random.randint(0, HEIGHT)
+            self.speed = random.uniform(8.0, 10.0)
 
     def draw(self, surface):
         pygame.draw.circle(surface, BLUE, (int(self.x), int(self.y)), self.size)
 
-def generate_plot(positions):
-    fig, ax = plt.subplots(figsize=(10, 7))
-    ax.axis('off')
-    ax.set_position([0, 0, 1, 1])
-    ax.set_xlim([0, WIDTH])
-    ax.set_ylim([-HEIGHT, 0])
+def get_power(positions):
     farm_power = 0
 
     if len(positions) > 0:
@@ -91,23 +90,7 @@ def generate_plot(positions):
                 wind_directions=[270.0],
                 turbulence_intensities=[0.08])
         fli.run()
-        horizontal_plane = fli.calculate_horizontal_plane(
-            x_resolution=200,
-            y_resolution=200,
-            height=90.0,
-        )
-
-        # Plot the flow field with rotors
-        visualize_cut_plane(horizontal_plane,
-                            ax=ax,
-                            label_contours=False,
-                            cmap='Blues_r')
-
         farm_power = fli.get_farm_power()[0]
-
-    # Save the plot as an image file
-    plt.savefig('plot_background.png', bbox_inches='tight', pad_inches=0, transparent=True)
-    plt.close()
 
     return farm_power
 
@@ -132,19 +115,14 @@ def draw_button():
 
 # setup floris
 fli = FlorisModel('./gch.yaml')
-_ = generate_plot(icon_positions)
 
 # Create a list of particles
-particles = [WindParticle() for _ in range(100)]
+particles = [WindParticle() for _ in range(500)]
 
 # Run the game loop
 running = True
 while running:
     window.fill(WHITE)
-    # Load and display the updated plot image
-    plot_image = pygame.image.load('plot_background.png')  # Reload updated plot
-    plot_image = pygame.transform.scale(plot_image, (WIDTH, HEIGHT))
-    window.blit(plot_image, (0, 0))  # Draw the plot image as the background
 
     # Draw the rectangle
     pygame.draw.rect(window, GRAY, rect, 5)
@@ -181,14 +159,14 @@ while running:
                     # Check if the new position is too close to any existing icon
                     if not is_too_close(new_pos, icon_positions, MIN_DISTANCE):
                         icon_positions.append(new_pos)
-                        new_power = generate_plot(icon_positions)
+                        new_power = get_power(icon_positions)
                         farm_powers.append(new_power)
 
                 # Check if the click is inside the button
                 if button_rect.collidepoint(mouse_x, mouse_y):
                     icon_positions.clear()  # Remove all icons
                     farm_powers.clear()
-                    new_power = generate_plot(icon_positions)
+                    new_power = get_power(icon_positions)
 
         elif event.type == pygame.FINGERDOWN:
             # Convert normalized touch position to screen coordinates
@@ -201,14 +179,14 @@ while running:
                 # Check if the new position is too close to any existing icon
                 if not is_too_close(new_pos, icon_positions, MIN_DISTANCE):
                     icon_positions.append(new_pos)
-                    new_power = generate_plot(icon_positions)
+                    new_power = get_power(icon_positions)
                     farm_powers.append(new_power)
 
             # Check if the touch is inside the button
             if button_rect.collidepoint(touch_x, touch_y):
                 icon_positions.clear()  # Remove all icons
                 farm_powers.clear()
-                new_power = generate_plot(icon_positions)
+                new_power = get_power(icon_positions)
 
         elif event.type == pygame.KEYDOWN:
             if event.key == pygame.K_ESCAPE:  # Check if ESC key is pressed
