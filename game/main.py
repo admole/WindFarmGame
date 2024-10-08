@@ -18,7 +18,7 @@ RED = (200, 0, 0)
 GREEN = (0, 200, 0)
 AMBER = (200, 150, 50)
 BLUE = (200, 200, 255)
-DARKBLUE = (150, 150, 200)
+DARKBLUE = (50, 50, 200)
 TEXT_COLOR = (0, 0, 0)
 
 MIN_DISTANCE = 100  # Adjust this value as needed
@@ -132,7 +132,7 @@ async def main():
     # Initialize pygame
     pygame.init()
     screen: pygame.Surface = pygame.display.set_mode((WIDTH, HEIGHT))
-    pygame.display.set_caption('Touch to add wind turbine to the wind farm')
+    pygame.display.set_caption('Wind Farm Simulation')
     clock = pygame.time.Clock()
 
     font = pygame.font.Font(None, 90)
@@ -142,9 +142,10 @@ async def main():
     rect_width, rect_height = 1800, 1300
     rect = pygame.Rect(rect_x, rect_y, rect_width, rect_height)
 
-
-    # Load the icon image (Ensure it's in the correct path accessible in the browser)
+    # Load the images
     icon_image = pygame.image.load('./assets/icon.png')
+    background = pygame.image.load('./assets/background.png')
+    background = pygame.transform.scale(background, (WIDTH, HEIGHT))
 
     # Resize the icon image if necessary
     icon_size = (126, 126)
@@ -167,7 +168,8 @@ async def main():
 
     running = True
     while running:
-        screen.fill(WHITE)
+        # screen.fill(WHITE)
+        screen.blit(background, (0, 0))
 
         pygame.draw.rect(screen, GRAY, rect, 5)
 
@@ -185,6 +187,10 @@ async def main():
         turbine_count_text = font.render(f"Number of turbines: {len(icon_positions)}  Windfarm Efficiency: {efficiency*100:.1f}%", True, color)
         text_rect = turbine_count_text.get_rect(center=(WIDTH // 2, HEIGHT - 30))
         screen.blit(turbine_count_text, text_rect)
+        if len(icon_positions) == 0:
+            top_text = font.render(f"Touch to add a wind turbine", True, TEXT_COLOR)
+            top_text_rect = turbine_count_text.get_rect(center=(WIDTH // 1.5, 30))
+            screen.blit(top_text, top_text_rect)
 
         for particle in particles:
             particle.update(icon_positions)
