@@ -14,8 +14,11 @@ WIDTH, HEIGHT = 2000, 1500
 # Define colors
 WHITE = (255, 255, 255)
 GRAY = (200, 200, 200)
-RED = (255, 0, 0)
+RED = (200, 0, 0)
+GREEN = (0, 200, 0)
+AMBER = (200, 150, 50)
 BLUE = (200, 200, 255)
+DARKBLUE = (150, 150, 200)
 TEXT_COLOR = (0, 0, 0)
 
 MIN_DISTANCE = 100  # Adjust this value as needed
@@ -28,12 +31,22 @@ class WindParticle:
         self.size = random.randint(2, 5)
         self.speed = random.uniform(8.0, 10.0)
         self.direction = random.uniform(-0.5, 0.5)  # Slight variation in direction
+        self.color = BLUE
+
+    def reset(self):
+        self.x = random.randint(0, WIDTH)
+        self.y = random.randint(0, HEIGHT)
+        self.size = random.randint(2, 5)
+        self.speed = random.uniform(8.0, 10.0)
+        self.direction = random.uniform(-0.5, 0.5)  # Slight variation in direction
+        self.color = BLUE
 
     def update(self, positions):
         for turbine_pos in positions:
             if abs(self.y - turbine_pos[1]) < 126:
                 if self.x > turbine_pos[0]:
                     self.speed = random.uniform(4.0, 5.0)
+                    self.color = DARKBLUE
 
         # Move the particle in the wind direction
         self.x += self.speed
@@ -44,9 +57,10 @@ class WindParticle:
             self.x = 0
             self.y = random.randint(0, HEIGHT)
             self.speed = random.uniform(8.0, 10.0)
+            self.color = BLUE
 
     def draw(self, surface):
-        pygame.draw.circle(surface, BLUE, (int(self.x), int(self.y)), self.size)
+        pygame.draw.circle(surface, self.color, (int(self.x), int(self.y)), self.size)
 
 
 # def get_power(positions, fli):
@@ -66,7 +80,26 @@ class WindParticle:
 #     return farm_power
 
 def get_power(positions, fli):
-    return len(positions) + 1
+    # sorted_positions = sorted(positions, key=lambda x: x[0])
+    # turbine_powers = ()
+    tolerance = 126
+    farm_power = 0
+
+    # Loop over each tuple (x, y)
+    for i, (x1, y1) in enumerate(positions):
+        count = 0
+
+        # Compare it with every other tuple
+        for j, (x2, y2) in enumerate(positions):
+            if i != j:  # Don't compare the same tuple
+                # Check if the y-values are within tolerance and x2 < x1
+                if abs(y1 - y2) <= tolerance and x2 < x1:
+                    count += 1
+
+        # Add to the total sum based on the count
+        farm_power += 1/(count+1)
+
+    return farm_power
 
 
 def is_too_close(new_pos, existing_positions, min_distance):
@@ -125,7 +158,7 @@ async def main():
 
     # setup floris
     # fli = FlorisModel('./assets/models/gch.yaml')
-    # fli = 1
+    fli = 1
 
     pygame.display.update()
 
@@ -143,7 +176,13 @@ async def main():
 
         button = draw_button(screen)
         efficiency = farm_powers[-1]/(farm_powers[0]*len(farm_powers)+1e-12) if len(farm_powers) > 0 else 0.
-        turbine_count_text = font.render(f"Number of turbines: {len(icon_positions)}  Windfarm Efficiency: {efficiency*100:.1f}%", True, TEXT_COLOR)
+        if efficiency > 0.9:
+            color = GREEN
+        elif efficiency > 0.8:
+            color = AMBER
+        else:
+            color = RED
+        turbine_count_text = font.render(f"Number of turbines: {len(icon_positions)}  Windfarm Efficiency: {efficiency*100:.1f}%", True, color)
         text_rect = turbine_count_text.get_rect(center=(WIDTH // 2, HEIGHT - 30))
         screen.blit(turbine_count_text, text_rect)
 
@@ -163,13 +202,15 @@ async def main():
                         new_pos = (float(mouse_x), float(mouse_y))
                         if not is_too_close(new_pos, icon_positions, MIN_DISTANCE):
                             icon_positions.append(new_pos)
-                            # new_power = get_power(icon_positions, fli)
-                            # farm_powers.append(new_power)
+                            new_power = get_power(icon_positions, fli)
+                            farm_powers.append(new_power)
 
                     if button.collidepoint(mouse_x, mouse_y):
                         icon_positions.clear()
-                        # farm_powers.clear()
+                        farm_powers.clear()
                         # new_power = get_power(icon_positions)
+                        for particle in particles:
+                            particle.reset()
 
             elif event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_ESCAPE:
