@@ -130,7 +130,7 @@ async def main():
     pygame.display.update()
 
     # Create a list of particles
-    particles = [WindParticle() for _ in range(1000)]
+    particles = [WindParticle() for _ in range(5000)]
 
     running = True
     while running:
