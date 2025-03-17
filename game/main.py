@@ -8,7 +8,7 @@ import random
 import pygame
 
 
-FPS = 30
+FPS = 20
 WIDTH, HEIGHT = 2000, 1500
 
 # Define colors
@@ -164,7 +164,7 @@ async def main():
     pygame.display.update()
 
     # Create a list of particles
-    particles = [WindParticle() for _ in range(5000)]
+    particles = [WindParticle() for _ in range(2500)]
 
     running = True
     while running:
